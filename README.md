@@ -15,4 +15,4 @@ Some cool things we can add at the org-level, or the repo-level, are:
 3. Pull Request Template -- a template that pre-populates new pull requests with guiding questions.
 4. README Template -- a template that pre-populates READMEs in new repos. Use this for guiding the setup of a new README, or to include top-level information in every README.
 5. Workflows -- pre-built workflows for boards, code, and even new repo creation.
-6. [Community Health Files](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/creating-a-default-community-health-file)https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/creating-a-default-community-health-file -- things like licenses, organizational info, links, etc.
+6. [Community Health Files](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/creating-a-default-community-health-file) -- things like licenses, organizational info, links, etc.
