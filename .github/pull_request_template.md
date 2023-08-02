@@ -1,3 +1,12 @@
+---
+name: Feature
+about: A template for creating new work
+title: "[FEATURE]"
+labels: feature
+assignees: ''
+
+---
+
 Closes #<!--Issue # here-->
 
 ## Description
