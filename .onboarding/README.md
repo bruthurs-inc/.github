@@ -21,12 +21,20 @@ If it wasn't completely fuckin' obvious, you just installed a linter/formatter c
     - `Press ⌘ + shift + P on Mac`
     - Search and select "user settings (json)"
     - add the following custom settings
-    ```
+    ```json
     "typescript.updateImportsOnFileMove.enabled": "always",
     "editor.defaultFormatter": "esbenp.prettier-vscode",
     "prettier.requireConfig": true,
     "editor.formatOnSave": true,
     "editor.formatOnPaste": true,
+    "[python]": {
+      "editor.defaultFormatter": "ms-python.black-formatter",
+      "editor.formatOnSave": true,
+      "editor.codeActionsOnSave": {
+        "source.organizeImports": true
+      }
+  },
+  "isort.args": ["--profile", "black"]
     ```
 
 5. Install Optionals
