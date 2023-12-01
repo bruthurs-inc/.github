@@ -33,8 +33,8 @@ If it wasn't completely fuckin' obvious, you just installed a linter/formatter c
       "editor.codeActionsOnSave": {
         "source.organizeImports": true
       }
-  },
-  "isort.args": ["--profile", "black"]
+    },
+    "isort.args": ["--profile", "black"]
     ```
 
 5. Install Optionals
