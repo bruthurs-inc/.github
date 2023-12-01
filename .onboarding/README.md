@@ -14,8 +14,9 @@ Notice how I didn't say "in your preferred editor"? That's because we have _stan
 3. Install Formatters
     - **Prettier** (extension ID: esbenp.prettier-vscode)
     - **Black** (extension ID: ms-python.black-formatter)
+    - **isort** (extension ID: ms-python.isort)
 
-If it wasn't completely fuckin' obvious, you just installed a linter/formatter combo to cover both the frontend and backend projects we support.
+If it wasn't completely fuckin' obvious, you just installed a linter/formatter combo (and an imports sorter) to cover both the frontend and backend projects we support.
 
 4. Update VSCode User Settings
     - `Press ⌘ + shift + P on Mac`
