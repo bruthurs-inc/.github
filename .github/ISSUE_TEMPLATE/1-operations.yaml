@@ -65,4 +65,4 @@ body:
   - type: markdown
     id: metadata
     attributes:
-      values: "<!-- operations_template -->"
+      value: "<!-- operations_template -->"
