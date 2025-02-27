@@ -6,59 +6,59 @@ title: "[Primary Service]: [Short Descriptor]"
 
 body:
   - type: dropdown
-      id: priority
-      attributes:
-        label: "Priority"
-        options:
-          - P0 (Critical urgency, extensive impact)
-          - P1 (High urgency, large impact)
-          - P2 (Moderate urgency, moderate impact)
-          - P3 (Low urgency, minor impact)
-          - P4 (Negligible urgency and impact)
-      validations:
-        required: true
+    id: priority
+    attributes:
+      label: "Priority"
+      options:
+        - P0 (Critical urgency, extensive impact)
+        - P1 (High urgency, large impact)
+        - P2 (Moderate urgency, moderate impact)
+        - P3 (Low urgency, minor impact)
+        - P4 (Negligible urgency and impact)
+    validations:
+      required: true
         
   - type: dropdown
-      id: level_of_effort
-      attributes:
-        label: "Level of Effort"
-        options:
-          - "Small (1 hour)"
-          - "Medium (1 day)"
-          - "Large (1 sprint)"
-          - "XL (1 quarter)"
-      validations:
-        required: true
+    id: level_of_effort
+    attributes:
+      label: "Level of Effort"
+      options:
+        - "Small (1 hour)"
+        - "Medium (1 day)"
+        - "Large (1 sprint)"
+        - "XL (1 quarter)"
+    validations:
+      required: true
         
   - type: textarea
-      id: description
-      attributes:
-        label: "Description"
-        placeholder: "Help others quickly understand the purpose, outcomes, and acceptance criteria of this work."
-      validations:
-        required: true
+    id: description
+    attributes:
+      label: "Description"
+      placeholder: "Help others quickly understand the purpose, outcomes, and acceptance criteria of this work."
+    validations:
+      required: true
         
   - type: input
-      id: due_date
-      attributes:
-        label: Due Date
-        placeholder: "YYYY-MM-DD"
-      validations:
-        required: true
+    id: due_date
+    attributes:
+      label: Due Date
+      placeholder: "YYYY-MM-DD"
+    validations:
+      required: true
         
   - type: input
-      id: origin
-      attributes:
-        label: "Where did this work originate?"
-        placeholder: "slack.conversation/link, security.scan/url, etc."
-      validations:
-        required: true
+    id: origin
+    attributes:
+      label: "Where did this work originate?"
+      placeholder: "slack.conversation/link, security.scan/url, etc."
+    validations:
+      required: true
         
   - type: input
-      id: poc
-      attributes:
-        label: For questions, who is the Point of Contact?
-        placeholder: "@myself, @outside.stakeholder, #slack-channel-team, etc."
-      validations:
-        required: true
+    id: poc
+    attributes:
+      label: For questions, who is the Point of Contact?
+      placeholder: "@myself, @outside.stakeholder, #slack-channel-team, etc."
+    validations:
+      required: true
         
