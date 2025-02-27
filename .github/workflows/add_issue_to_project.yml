@@ -21,11 +21,11 @@ jobs:
 
       - name: Update Project Fields
         run: |
-          gh project item-edit --project "$PROJECT_ID" --id "$ISSUE_ID" \
+          gh project item-edit --project-id "$PROJECT_ID" --id "$ISSUE_ID" \
             --field "Due Date=$DUE_DATE" \
             --field "Priority=$PRIORITY" \
             --field "Level of Effort=$EFFORT"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PROJECT_ID: "2"
+          PROJECT_ID: "2"  # Your GitHub Project ID
           ISSUE_ID: ${{ github.event.issue.node_id }}
