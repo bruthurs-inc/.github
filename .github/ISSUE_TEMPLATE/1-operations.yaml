@@ -61,8 +61,3 @@ body:
       placeholder: "@myself, @outside.stakeholder, #slack-channel-team, etc."
     validations:
       required: true
-
-  - type: markdown
-    id: metadata
-    attributes:
-      value: "<!-- operations_template -->"
