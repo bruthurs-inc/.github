@@ -22,10 +22,13 @@ jobs:
       - name: Update Project Fields
         run: |
           gh project item-edit --project-id "$PROJECT_ID" --id "$ISSUE_ID" \
-            --field "Due Date=$DUE_DATE" \
-            --field "Priority=$PRIORITY" \
-            --field "Level of Effort=$EFFORT"
+            --field-id "due_date_field_id" --text "$DUE_DATE" \
+            --field-id "priority_field_id" --text "$PRIORITY" \
+            --field-id "level_of_effort_field_id" --text "$EFFORT"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PROJECT_ID: "2"  # Your GitHub Project ID
           ISSUE_ID: ${{ github.event.issue.node_id }}
+          DUE_DATE: ${{ env.DUE_DATE }}  # Ensure these are set earlier in your workflow
+          PRIORITY: ${{ env.PRIORITY }}
+          EFFORT: ${{ env.EFFORT }}
