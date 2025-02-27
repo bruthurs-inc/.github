@@ -5,7 +5,7 @@ on:
 jobs:
   map-fields:
     runs-on: ubuntu-latest
-    if: contains(github.event.issue.body, '<!-- operations_template -->')
+    if: contains(github.event.issue.body, "<!-- operations_template -->")
     steps:
       - name: Map Issue Fields to Project Fields
         uses: github-actions/add-issue-to-project@v1
