@@ -1,20 +1,22 @@
-name: Add Operations Issues to Project
+name: Update Operations Issue Fields
 on:
   issues:
     types: [opened]
+
 jobs:
-  map-fields:
+  update-fields:
     runs-on: ubuntu-latest
     if: contains(github.event.issue.labels.*.name, 'triage')
     steps:
-      - name: Map Issue Fields to Project Fields
-        uses: github-actions/add-issue-to-project@v1
-        with:
-          project: "bruthurs-inc/2"
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          fields: >-
-            {
-              "Due Date": "${{ fromJson(github.event.issue.body).due_date }}",
-              "Priority": "${{ fromJson(github.event.issue.body).priority }}",
-              "Level of Effort": "${{ fromJson(github.event.issue.body).level_of_effort }}"
-            }
+      - name: Update Project Fields
+        run: |
+          gh project item-update $PROJECT_ID --owner $OWNER --item-id $ISSUE_ID \
+            --field "Due Date=${{ fromJson(github.event.issue.body).due_date }}" \
+            --field "Priority=${{ fromJson(github.event.issue.body).priority }}" \
+            --field "Level of Effort=${{ fromJson(github.event.issue.body).level_of_effort }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PROJECT_ID: "2"
+          OWNER: "bruthurs-inc"
+          ISSUE_ID: ${{ github.event.issue.node_id }}
+          
