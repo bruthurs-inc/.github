@@ -2,6 +2,9 @@ name: Update Operations Issue Fields
 on:
   issues:
     types: [opened]
+permissions:
+  issues: write
+  contents: read
 
 jobs:
   update-fields:
@@ -26,7 +29,6 @@ jobs:
             --field-id "$PRIORITY_FIELD_ID" --text "$PRIORITY" \
             --field-id "$EFFORT_FIELD_ID" --text "$EFFORT"
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PROJECT_ID: "PVT_kwDOBfaOE84ATF4c"  # Your GitHub Project ID
           ISSUE_ID: ${{ github.event.issue.node_id }}
           DUE_DATE: ${{ env.DUE_DATE }}  
