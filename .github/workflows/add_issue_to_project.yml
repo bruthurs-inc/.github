@@ -8,12 +8,23 @@ jobs:
     runs-on: ubuntu-latest
     if: contains(github.event.issue.labels.*.name, 'triage')
     steps:
+      - name: Extract Fields from Issue Body
+        id: extract_fields
+        run: |
+          DUE_DATE=$(echo "${{ github.event.issue.body }}" | grep -oP '(?<=Due Date: ).*')
+          PRIORITY=$(echo "${{ github.event.issue.body }}" | grep -oP '(?<=Priority: ).*')
+          EFFORT=$(echo "${{ github.event.issue.body }}" | grep -oP '(?<=Level of Effort: ).*')
+
+          echo "DUE_DATE=$DUE_DATE" >> $GITHUB_ENV
+          echo "PRIORITY=$PRIORITY" >> $GITHUB_ENV
+          echo "EFFORT=$EFFORT" >> $GITHUB_ENV
+
       - name: Update Project Fields
         run: |
-          gh project item-update $PROJECT_ID --owner $OWNER --item-id $ISSUE_ID \
-            --field "Due Date=${{ fromJson(github.event.issue.body).due_date }}" \
-            --field "Priority=${{ fromJson(github.event.issue.body).priority }}" \
-            --field "Level of Effort=${{ fromJson(github.event.issue.body).level_of_effort }}"
+          gh project item-update "$PROJECT_ID" --owner "$OWNER" --item-id "$ISSUE_ID" \
+            --field "Due Date=$DUE_DATE" \
+            --field "Priority=$PRIORITY" \
+            --field "Level of Effort=$EFFORT"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PROJECT_ID: "2"
