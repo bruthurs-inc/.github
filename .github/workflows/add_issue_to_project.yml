@@ -1,0 +1,21 @@
+name: Add Operations Issues to Project
+on:
+  issues:
+    types: [opened]
+jobs:
+  map-fields:
+    runs-on: ubuntu-latest
+    if: contains(github.event.issue.body, '<!-- operations_template -->')
+    steps:
+      - name: Map Issue Fields to Project Fields
+        uses: github-actions/add-issue-to-project@v1
+        with:
+          project: "bruthurs-inc/2"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          fields: |
+            {
+              "Due Date": "${{ github.event.issue.body | fromJson | .due_date }}",
+              "Priority": "${{ github.event.issue.body | fromJson | .priority }}",
+              "Level of Effort": "${{ github.event.issue.body | fromJson | .level_of_effort }}"
+            }
+            
