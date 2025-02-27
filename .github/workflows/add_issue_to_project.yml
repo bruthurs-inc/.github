@@ -19,4 +19,3 @@ jobs:
           PROJECT_ID: "2"
           OWNER: "bruthurs-inc"
           ISSUE_ID: ${{ github.event.issue.node_id }}
-          
