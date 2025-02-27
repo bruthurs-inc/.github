@@ -26,7 +26,7 @@ jobs:
             --field-id "$PRIORITY_FIELD_ID" --text "$PRIORITY" \
             --field-id "$EFFORT_FIELD_ID" --text "$EFFORT"
         env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
           PROJECT_ID: "PVT_kwDOBfaOE84ATF4c"  # Your GitHub Project ID
           ISSUE_ID: ${{ github.event.issue.node_id }}
           DUE_DATE: ${{ env.DUE_DATE }}  
