@@ -11,9 +11,9 @@ jobs:
       - name: Extract Fields from Issue Body
         id: extract_fields
         run: |
-          DUE_DATE=$(echo "${{ github.event.issue.body }}" | grep -oP '(?<=Due Date: ).*')
-          PRIORITY=$(echo "${{ github.event.issue.body }}" | grep -oP '(?<=Priority: ).*')
-          EFFORT=$(echo "${{ github.event.issue.body }}" | grep -oP '(?<=Level of Effort: ).*')
+          DUE_DATE=$(awk -v RS="" '/### Due Date/ {print $3}' <<< "${{ github.event.issue.body }}")
+          PRIORITY=$(awk -v RS="" '/### Priority/ {print $3,$4,$5,$6,$7}' <<< "${{ github.event.issue.body }}")
+          EFFORT=$(awk -v RS="" '/### Level of Effort/ {print $4,$5,$6}' <<< "${{ github.event.issue.body }}")
 
           echo "DUE_DATE=$DUE_DATE" >> $GITHUB_ENV
           echo "PRIORITY=$PRIORITY" >> $GITHUB_ENV
