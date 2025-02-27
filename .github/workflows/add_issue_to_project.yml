@@ -22,9 +22,9 @@ jobs:
       - name: Update Project Fields
         run: |
           gh project item-edit --project-id "$PROJECT_ID" --id "$ISSUE_ID" \
-            --field-id "due_date_field_id" --text "$DUE_DATE" \
-            --field-id "priority_field_id" --text "$PRIORITY" \
-            --field-id "level_of_effort_field_id" --text "$EFFORT"
+            --field-id "PVTF_lADOBfaOE84ATF4czgpFJGw" --text "$DUE_DATE" \
+            --field-id "PVTSSF_lADOBfaOE84ATF4czgpFJPM" --text "$PRIORITY" \
+            --field-id "PVTSSF_lADOBfaOE84ATF4czgpFJSo" --text "$EFFORT"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PROJECT_ID: "PVT_kwDOBfaOE84ATF4c"  # Your GitHub Project ID
