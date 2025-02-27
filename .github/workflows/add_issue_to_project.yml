@@ -12,10 +12,5 @@ jobs:
         with:
           project: "bruthurs-inc/2"
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          fields: |
-            {
-              "Due Date": "${{ github.event.issue.body | fromJson | .due_date }}",
-              "Priority": "${{ github.event.issue.body | fromJson | .priority }}",
-              "Level of Effort": "${{ github.event.issue.body | fromJson | .level_of_effort }}"
-            }
-            
+          fields: '{"Due Date": "${{ github.event.issue.body | fromJson | .due_date }}", "Priority": "${{ github.event.issue.body | fromJson | .priority }}", "Level of Effort": "${{ github.event.issue.body | fromJson | .level_of_effort }}"}'
+          
