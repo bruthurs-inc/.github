@@ -27,7 +27,7 @@ jobs:
             --field-id "level_of_effort_field_id" --text "$EFFORT"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PROJECT_ID: "2"  # Your GitHub Project ID
+          PROJECT_ID: "PVT_kwDOBfaOE84ATF4c"  # Your GitHub Project ID
           ISSUE_ID: ${{ github.event.issue.node_id }}
           DUE_DATE: ${{ env.DUE_DATE }}  # Ensure these are set earlier in your workflow
           PRIORITY: ${{ env.PRIORITY }}
