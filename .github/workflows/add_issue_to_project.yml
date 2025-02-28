@@ -11,11 +11,23 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.PROJECT_PAT }}
         run: |
-          # Extract the issue body and parse fields using grep
           ISSUE_BODY="${{ github.event.issue.body }}"
-          PRIORITY=$(echo "$ISSUE_BODY" | grep -oP '(?<=### Priority\n\n).*')
-          EFFORT=$(echo "$ISSUE_BODY" | grep -oP '(?<=### Level of Effort\n\n).*')
-          DUE_DATE=$(echo "$ISSUE_BODY" | grep -oP '(?<=### Due Date\n\n).*')
+
+          # Extract values using awk (handles multiline better)
+          PRIORITY=$(echo "$ISSUE_BODY" | awk -v RS='' '/### Priority/ {getline; print}')
+          EFFORT=$(echo "$ISSUE_BODY" | awk -v RS='' '/### Level of Effort/ {getline; print}')
+          DUE_DATE=$(echo "$ISSUE_BODY" | awk -v RS='' '/### Due Date/ {getline; print}')
+          
+          # Debugging Output (for testing)
+          echo "Extracted Priority: $PRIORITY"
+          echo "Extracted Effort: $EFFORT"
+          echo "Extracted Due Date: $DUE_DATE"
+          
+          # Fail if any required value is empty
+          if [[ -z "$PRIORITY" || -z "$EFFORT" || -z "$DUE_DATE" ]]; then
+            echo "Error: One or more extracted values are empty."
+            exit 1
+          fi
 
           # Get project item ID for the issue
           ITEM_ID=$(gh api graphql -F owner='bruthurs-inc' -F projectNumber=2 -F issueId="${{ github.event.issue.node_id }}" -f query='
