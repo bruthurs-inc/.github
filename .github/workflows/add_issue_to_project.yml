@@ -11,18 +11,23 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.PROJECT_PAT }}
         run: |
+          set -e  # Exit immediately if a command fails
+
+          echo "Extracting issue fields..."
           ISSUE_BODY="${{ github.event.issue.body }}"
+          echo "Issue Body: $ISSUE_BODY"
 
           # Extract values using awk
           PRIORITY=$(echo "$ISSUE_BODY" | awk -v RS='' '/### Priority/ {getline; print}')
           EFFORT=$(echo "$ISSUE_BODY" | awk -v RS='' '/### Level of Effort/ {getline; print}')
           DUE_DATE=$(echo "$ISSUE_BODY" | awk -v RS='' '/### Due Date/ {getline; print}')
 
-          echo "Extracted Priority: $PRIORITY"
-          echo "Extracted Effort: $EFFORT"
-          echo "Extracted Due Date: $DUE_DATE"
+          echo "Extracted Priority: '$PRIORITY'"
+          echo "Extracted Effort: '$EFFORT'"
+          echo "Extracted Due Date: '$DUE_DATE'"
 
-          # Fetch project fields with correct GraphQL query
+          # Fetch project fields
+          echo "Fetching project fields..."
           PROJECT_FIELDS=$(gh api graphql -F projectId="PVT_kwDOBfaOE84ATF4c" -f query='
             query($projectId: ID!) {
               node(id: $projectId) {
@@ -31,7 +36,6 @@ jobs:
                     nodes {
                       id
                       name
-                      dataType
                       ... on ProjectV2SingleSelectField {
                         options {
                           id
@@ -44,7 +48,11 @@ jobs:
               }
             }')
 
-          # Extract field IDs and options using jq with improved filtering
+          echo "Received Project Fields JSON:"
+          echo "$PROJECT_FIELDS" | jq .
+
+          # Extract field options
+          echo "Extracting field options..."
           PRIORITY_OPTION_ID=$(echo "$PROJECT_FIELDS" | jq -r --arg priority "$PRIORITY" '
             .data.node.fields.nodes[] | select(.name == "Priority") | .options[] |
             select(.name == $priority) | .id')
@@ -53,14 +61,21 @@ jobs:
             .data.node.fields.nodes[] | select(.name == "Effort") | .options[] |
             select(.name == $effort) | .id')
 
+          echo "Priority Option ID: '$PRIORITY_OPTION_ID'"
+          echo "Effort Option ID: '$EFFORT_OPTION_ID'"
+
           # Convert Due Date to ISO 8601 format
-          DUE_DATE_ISO=$(date -d "$DUE_DATE" --iso-8601=seconds)
+          echo "Converting due date..."
+          if [[ -n "$DUE_DATE" ]]; then
+            DUE_DATE_ISO=$(date -d "$DUE_DATE" --iso-8601=seconds || echo "")
+          else
+            DUE_DATE_ISO=""
+          fi
 
-          echo "Priority Option ID: $PRIORITY_OPTION_ID"
-          echo "Effort Option ID: $EFFORT_OPTION_ID"
-          echo "Due Date (ISO): $DUE_DATE_ISO"
+          echo "Due Date (ISO): '$DUE_DATE_ISO'"
 
-          # Fetch the project item ID for the current issue
+          # Fetch project item ID
+          echo "Fetching project item ID..."
           ITEM_ID=$(gh api graphql -F projectId="PVT_kwDOBfaOE84ATF4c" -F contentId="${{ github.event.issue.node_id }}" -f query='
             query($projectId: ID!, $contentId: ID!) {
               node(id: $projectId) {
@@ -77,7 +92,7 @@ jobs:
               }
             }' --jq '.data.node.items.nodes[] | select(.content.id == "${{ github.event.issue.node_id }}") | .id')
 
-          echo "Project Item ID: $ITEM_ID"
+          echo "Project Item ID: '$ITEM_ID'"
 
           # Check if required values are empty
           if [[ -z "$PRIORITY_OPTION_ID" || -z "$EFFORT_OPTION_ID" || -z "$DUE_DATE_ISO" || -z "$ITEM_ID" ]]; then
@@ -85,7 +100,8 @@ jobs:
             exit 1
           fi
 
-          # Update the project fields
+          # Update project fields
+          echo "Updating project fields..."
           gh api graphql -F itemId="$ITEM_ID" -F projectId="PVT_kwDOBfaOE84ATF4c" -f query='
             mutation ($itemId: ID!, $projectId: ID!) {
               updatePriority: updateProjectV2ItemFieldValue(
