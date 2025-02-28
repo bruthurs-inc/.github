@@ -18,12 +18,11 @@ jobs:
           EFFORT=$(echo "$ISSUE_BODY" | awk -v RS='' '/### Level of Effort/ {getline; print}')
           DUE_DATE=$(echo "$ISSUE_BODY" | awk -v RS='' '/### Due Date/ {getline; print}')
 
-          # Debugging Output
           echo "Extracted Priority: $PRIORITY"
           echo "Extracted Effort: $EFFORT"
           echo "Extracted Due Date: $DUE_DATE"
 
-          # Fetch project options for priority and effort
+          # Fetch project fields and available single select options
           PROJECT_FIELDS=$(gh api graphql -F projectId="PVT_kwDOBfaOE84ATF4c" -f query='
             query($projectId: ID!) {
               node(id: $projectId) {
@@ -32,10 +31,13 @@ jobs:
                     nodes {
                       id
                       name
-                      singleSelectOptions(first: 100) {
-                        nodes {
-                          id
-                          name
+                      dataType
+                      ... on ProjectV2SingleSelectField {
+                        singleSelectOptions(first: 100) {
+                          nodes {
+                            id
+                            name
+                          }
                         }
                       }
                     }
@@ -45,8 +47,8 @@ jobs:
             }')
 
           # Extract available options for fuzzy matching
-          PRIORITY_OPTIONS=$(echo "$PROJECT_FIELDS" | jq -r '.data.node.fields.nodes[] | select(.name == "Priority") | .singleSelectOptions.nodes[] | "\(.id) \(.name)"')
-          EFFORT_OPTIONS=$(echo "$PROJECT_FIELDS" | jq -r '.data.node.fields.nodes[] | select(.name == "Effort") | .singleSelectOptions.nodes[] | "\(.id) \(.name)"')
+          PRIORITY_OPTIONS=$(echo "$PROJECT_FIELDS" | jq -r '.data.node.fields.nodes[] | select(.name == "Priority" and .dataType == "SINGLE_SELECT") | .singleSelectOptions.nodes[] | "\(.id) \(.name)"')
+          EFFORT_OPTIONS=$(echo "$PROJECT_FIELDS" | jq -r '.data.node.fields.nodes[] | select(.name == "Effort" and .dataType == "SINGLE_SELECT") | .singleSelectOptions.nodes[] | "\(.id) \(.name)"')
 
           # Fuzzy match function (picks the best match by checking for a substring)
           fuzzy_match() {
@@ -54,8 +56,6 @@ jobs:
             OPTIONS="$2"
 
             MATCHED_ID=""
-            MATCHED_SCORE=0
-
             while IFS= read -r LINE; do
               OPTION_ID=$(echo "$LINE" | awk '{print $1}')
               OPTION_NAME=$(echo "$LINE" | awk '{print substr($0, index($0,$2))}')
@@ -78,12 +78,10 @@ jobs:
             DUE_DATE_ISO=$(date -d "$DUE_DATE" --iso-8601=seconds 2>/dev/null || date -j -f "%Y-%m-%d" "$DUE_DATE" "+%Y-%m-%dT%H:%M:%SZ")
           fi
 
-          # Debugging Output
           echo "Matched Priority Option ID: $PRIORITY_OPTION_ID"
           echo "Matched Effort Option ID: $EFFORT_OPTION_ID"
           echo "Due Date (ISO): $DUE_DATE_ISO"
 
-          # Check if required values are empty
           if [[ -z "$PRIORITY_OPTION_ID" || -z "$EFFORT_OPTION_ID" || -z "$DUE_DATE_ISO" ]]; then
             echo "Error: One or more required values are empty."
             exit 1
@@ -91,7 +89,7 @@ jobs:
 
           # Get issue item ID in the project
           ITEM_ID=$(gh api graphql -F projectId="PVT_kwDOBfaOE84ATF4c" -F issueId="${{ github.event.issue.node_id }}" -f query='
-            query($projectId: ID!, $issueId: ID!) {
+            query($projectId: ID!) {
               node(id: $projectId) {
                 ... on ProjectV2 {
                   items(first: 100) {
