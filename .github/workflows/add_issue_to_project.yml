@@ -29,23 +29,27 @@ jobs:
             exit 1
           fi
 
-          ITEM_ID=$(gh api graphql -F owner='bruthurs-inc' -F projectNumber=2 -f query='
-          query ($owner: String!, $projectNumber: Int!) {
-            organization(login: $owner) {
-              projectV2(number: $projectNumber) {
-                items(first: 100) {
-                  nodes {
-                    id
-                    content {
-                      ... on Issue {
-                        id
+          # Get the project item ID for the issue
+          PROJECT_ID="PVT_kwDOBfaOE84ATF4c"
+          ISSUE_ID="${{ github.event.issue.node_id }}"
+          
+          ITEM_ID=$(gh api graphql -F projectId="$PROJECT_ID" -f query='
+            query ($projectId: ID!) {
+              node(id: $projectId) {
+                ... on ProjectV2 {
+                  items(first: 100) {
+                    nodes {
+                      id
+                      content {
+                        ... on Issue {
+                          id
+                        }
                       }
                     }
                   }
                 }
               }
-            }
-          }' --jq '.data.organization.projectV2.items.nodes[] | select(.content.id == "'"${{ github.event.issue.node_id }}"'" ) | .id')
+            }' --jq '.data.node.items.nodes[] | select(.content.id == "'"$ISSUE_ID"'" ) | .id')
 
           # Check if ITEM_ID is found
           if [[ -z "$ITEM_ID" ]]; then
@@ -54,7 +58,7 @@ jobs:
           fi
 
           # Update project fields via GraphQL
-          gh api graphql -F itemId="$ITEM_ID" -F projectId="PVT_kwDOBfaOE84ATF4c" -f query='
+          gh api graphql -F itemId="$ITEM_ID" -F projectId="$PROJECT_ID" -f query='
             mutation ($itemId: ID!, $projectId: ID!) {
               updateProjectV2ItemFieldValue(
                 input: {
