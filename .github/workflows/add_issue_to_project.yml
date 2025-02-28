@@ -43,6 +43,17 @@ jobs:
                         name
                       }
                     }
+                    ... on ProjectV2IterationField {
+                      configuration {
+                        iterations {
+                          id
+                          title
+                        }
+                      }
+                    }
+                    ... on ProjectV2Field {
+                      dataType
+                    }
                   }
                 }
               }
