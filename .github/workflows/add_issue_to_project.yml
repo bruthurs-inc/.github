@@ -90,6 +90,32 @@ jobs:
 
           echo "Due Date (ISO): '$DUE_DATE_ISO'"
 
+          echo "Fetching project item ID..."
+          PROJECT_ITEMS=$(gh api graphql -F projectId="PVT_kwDOBfaOE84ATF4c" -f query='
+            query($projectId: ID!) {
+              node(id: $projectId) {
+                ... on ProjectV2 {
+                  items(first: 100) {
+                    nodes {
+                      id
+                      content { ... on Issue { id } }
+                    }
+                  }
+                }
+              }
+            }')
+          
+          echo "Raw Project Items Response:"
+          echo "$PROJECT_ITEMS" | jq '.'  # Pretty-print the JSON response
+
+          ISSUE_NODE_ID="${{ github.event.issue.node_id }}"
+
+          ITEM_ID=$(echo "$PROJECT_ITEMS" | jq -r --arg issue_id "$ISSUE_NODE_ID" '
+            .data.node.items.nodes[] | select(.content.id == $issue_id) | .id'
+          )
+          
+          echo "Extracted Project Item ID: '$ITEM_ID'"
+
           # Fetch project item ID
           echo "Fetching project item ID..."
           ITEM_ID=$(gh api graphql -F projectId="PVT_kwDOBfaOE84ATF4c" -F contentId="${{ github.event.issue.node_id }}" -f query='
