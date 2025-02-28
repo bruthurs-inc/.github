@@ -22,7 +22,7 @@ jobs:
           echo "Extracted Effort: $EFFORT"
           echo "Extracted Due Date: $DUE_DATE"
 
-          # Fetch project fields and available single select options
+          # Fetch project fields with correctly structured GraphQL query
           PROJECT_FIELDS=$(gh api graphql -F projectId="PVT_kwDOBfaOE84ATF4c" -f query='
             query($projectId: ID!) {
               node(id: $projectId) {
@@ -32,9 +32,9 @@ jobs:
                       id
                       name
                       dataType
-                      ... on ProjectV2SingleSelectField {
-                        singleSelectOptions(first: 100) {
-                          nodes {
+                      configuration {
+                        ... on ProjectV2SingleSelectFieldConfiguration {
+                          options {
                             id
                             name
                           }
@@ -47,8 +47,8 @@ jobs:
             }')
 
           # Extract available options for fuzzy matching
-          PRIORITY_OPTIONS=$(echo "$PROJECT_FIELDS" | jq -r '.data.node.fields.nodes[] | select(.name == "Priority" and .dataType == "SINGLE_SELECT") | .singleSelectOptions.nodes[] | "\(.id) \(.name)"')
-          EFFORT_OPTIONS=$(echo "$PROJECT_FIELDS" | jq -r '.data.node.fields.nodes[] | select(.name == "Effort" and .dataType == "SINGLE_SELECT") | .singleSelectOptions.nodes[] | "\(.id) \(.name)"')
+          PRIORITY_OPTIONS=$(echo "$PROJECT_FIELDS" | jq -r '.data.node.fields.nodes[] | select(.name == "Priority" and .dataType == "SINGLE_SELECT") | .configuration.options[] | "\(.id) \(.name)"')
+          EFFORT_OPTIONS=$(echo "$PROJECT_FIELDS" | jq -r '.data.node.fields.nodes[] | select(.name == "Effort" and .dataType == "SINGLE_SELECT") | .configuration.options[] | "\(.id) \(.name)"')
 
           # Fuzzy match function (picks the best match by checking for a substring)
           fuzzy_match() {
