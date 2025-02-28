@@ -1,40 +1,36 @@
-name: Update Operations Issue Fields
+name: Map Operations Issue Fields to Project
+
 on:
   issues:
-    types: [opened]
-permissions:
-  issues: write
-  contents: read
+    types:
+      - opened
 
 jobs:
-  update-fields:
+  map-fields:
     runs-on: ubuntu-latest
-    if: contains(github.event.issue.labels.*.name, 'triage')
     steps:
-      - name: Extract Fields from Issue Body
+      - name: Check for "triage" label
+        if: contains(github.event.issue.labels.*.name, 'triage')
+        run: echo "Issue contains the 'triage' label. Proceeding with field mapping."
+
+      - name: Extract Issue Fields
         id: extract_fields
         run: |
-          DUE_DATE=$(awk -v RS="" '/### Due Date/ {print $3}' <<< "${{ github.event.issue.body }}")
-          PRIORITY=$(awk -v RS="" '/### Priority/ {print $3,$4,$5,$6,$7}' <<< "${{ github.event.issue.body }}")
-          EFFORT=$(awk -v RS="" '/### Level of Effort/ {print $4,$5,$6}' <<< "${{ github.event.issue.body }}")
+          PRIORITY=$(echo "${{ github.event.issue.body }}" | grep -A1 "### Priority" | tail -n1 | xargs)
+          EFFORT=$(echo "${{ github.event.issue.body }}" | grep -A1 "### Level of Effort" | tail -n1 | xargs)
+          DUE_DATE=$(echo "${{ github.event.issue.body }}" | grep -A1 "### Due Date" | tail -n1 | xargs)
 
-          echo "DUE_DATE=$DUE_DATE" >> $GITHUB_ENV
-          echo "PRIORITY=$PRIORITY" >> $GITHUB_ENV
-          echo "EFFORT=$EFFORT" >> $GITHUB_ENV
+          echo "priority=$PRIORITY" >> $GITHUB_ENV
+          echo "effort=$EFFORT" >> $GITHUB_ENV
+          echo "due_date=$DUE_DATE" >> $GITHUB_ENV
 
-      - name: Update Project Fields
-        run: |
-          gh project item-edit --project-id "$PROJECT_ID" --id "$ISSUE_ID" \
-            --field-id "$DUE_DATE_FIELD_ID" --text "$DUE_DATE" \
-            --field-id "$PRIORITY_FIELD_ID" --text "$PRIORITY" \
-            --field-id "$EFFORT_FIELD_ID" --text "$EFFORT"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PROJECT_ID: "PVT_kwDOBfaOE84ATF4c"  # Your GitHub Project ID
-          ISSUE_ID: ${{ github.event.issue.node_id }}
-          DUE_DATE: ${{ env.DUE_DATE }}  
-          PRIORITY: ${{ env.PRIORITY }}
-          EFFORT: ${{ env.EFFORT }}
-          DUE_DATE_FIELD_ID: "PVTF_lADOBfaOE84ATF4czgpFJGw"
-          PRIORITY_FIELD_ID: "PVTSSF_lADOBfaOE84ATF4czgpFJPM"
-          EFFORT_FIELD_ID: "PVTSSF_lADOBfaOE84ATF4czgpFJSo"
+      - name: Add Issue to Project and Set Fields
+        uses: actions/add-to-project@v1
+        with:
+          project-url: https://github.com/orgs/bruthurs-inc/projects/2
+          github-token: ${{ secrets.PROJECT_PAT }}
+          content-id: ${{ github.event.issue.node_id }}
+          fields: |
+            Priority: ${{ env.priority }}
+            Level of Effort: ${{ env.effort }}
+            Due Date: ${{ env.due_date }}
