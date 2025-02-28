@@ -22,7 +22,7 @@ jobs:
           echo "Extracted Effort: $EFFORT"
           echo "Extracted Due Date: $DUE_DATE"
 
-          # Fetch project fields with correctly structured GraphQL query
+          # Fetch project fields
           PROJECT_FIELDS=$(gh api graphql -F projectId="PVT_kwDOBfaOE84ATF4c" -f query='
             query($projectId: ID!) {
               node(id: $projectId) {
@@ -46,68 +46,44 @@ jobs:
               }
             }')
 
-          # Extract available options for fuzzy matching
-          PRIORITY_OPTIONS=$(echo "$PROJECT_FIELDS" | jq -r '.data.node.fields.nodes[] | select(.name == "Priority" and .dataType == "SINGLE_SELECT") | .configuration.options[] | "\(.id) \(.name)"')
-          EFFORT_OPTIONS=$(echo "$PROJECT_FIELDS" | jq -r '.data.node.fields.nodes[] | select(.name == "Effort" and .dataType == "SINGLE_SELECT") | .configuration.options[] | "\(.id) \(.name)"')
+          # Extract field IDs and options using jq with fuzzy matching
+          PRIORITY_OPTION_ID=$(echo "$PROJECT_FIELDS" | jq -r --arg priority "$PRIORITY" '
+            .data.node.fields.nodes[] | select(.name == "Priority") | .configuration.options[] |
+            select($priority | startswith(.name)) | .id')
 
-          # Fuzzy match function (picks the best match by checking for a substring)
-          fuzzy_match() {
-            INPUT_TEXT="$1"
-            OPTIONS="$2"
-
-            MATCHED_ID=""
-            while IFS= read -r LINE; do
-              OPTION_ID=$(echo "$LINE" | awk '{print $1}')
-              OPTION_NAME=$(echo "$LINE" | awk '{print substr($0, index($0,$2))}')
-
-              if [[ "$INPUT_TEXT" == *"$OPTION_NAME"* ]]; then
-                MATCHED_ID="$OPTION_ID"
-                break
-              fi
-            done <<< "$OPTIONS"
-
-            echo "$MATCHED_ID"
-          }
-
-          # Get fuzzy matched option IDs
-          PRIORITY_OPTION_ID=$(fuzzy_match "$PRIORITY" "$PRIORITY_OPTIONS")
-          EFFORT_OPTION_ID=$(fuzzy_match "$EFFORT" "$EFFORT_OPTIONS")
+          EFFORT_OPTION_ID=$(echo "$PROJECT_FIELDS" | jq -r --arg effort "$EFFORT" '
+            .data.node.fields.nodes[] | select(.name == "Effort") | .configuration.options[] |
+            select($effort | startswith(.name)) | .id')
 
           # Convert Due Date to ISO 8601 format
-          if [[ -n "$DUE_DATE" ]]; then
-            DUE_DATE_ISO=$(date -d "$DUE_DATE" --iso-8601=seconds 2>/dev/null || date -j -f "%Y-%m-%d" "$DUE_DATE" "+%Y-%m-%dT%H:%M:%SZ")
-          fi
+          DUE_DATE_ISO=$(date -d "$DUE_DATE" --iso-8601=seconds)
 
-          echo "Matched Priority Option ID: $PRIORITY_OPTION_ID"
-          echo "Matched Effort Option ID: $EFFORT_OPTION_ID"
+          echo "Priority Option ID: $PRIORITY_OPTION_ID"
+          echo "Effort Option ID: $EFFORT_OPTION_ID"
           echo "Due Date (ISO): $DUE_DATE_ISO"
 
-          if [[ -z "$PRIORITY_OPTION_ID" || -z "$EFFORT_OPTION_ID" || -z "$DUE_DATE_ISO" ]]; then
-            echo "Error: One or more required values are empty."
-            exit 1
-          fi
-
-          # Get issue item ID in the project
-          ITEM_ID=$(gh api graphql -F projectId="PVT_kwDOBfaOE84ATF4c" -F issueId="${{ github.event.issue.node_id }}" -f query='
-            query($projectId: ID!) {
+          # Fetch the project item ID for the current issue
+          ITEM_ID=$(gh api graphql -F projectId="PVT_kwDOBfaOE84ATF4c" -F contentId="${{ github.event.issue.node_id }}" -f query='
+            query($projectId: ID!, $contentId: ID!) {
               node(id: $projectId) {
                 ... on ProjectV2 {
                   items(first: 100) {
                     nodes {
                       id
                       content {
-                        ... on Issue {
-                          id
-                        }
+                        ... on Issue { id }
                       }
                     }
                   }
                 }
               }
-            }' --jq '.data.node.items.nodes[] | select(.content.id == "'"${{ github.event.issue.node_id }}"'") | .id')
+            }' --jq '.data.node.items.nodes[] | select(.content.id == "${{ github.event.issue.node_id }}") | .id')
 
-          if [[ -z "$ITEM_ID" ]]; then
-            echo "Error: Could not determine the item ID for this issue."
+          echo "Project Item ID: $ITEM_ID"
+
+          # Check if required values are empty
+          if [[ -z "$PRIORITY_OPTION_ID" || -z "$EFFORT_OPTION_ID" || -z "$DUE_DATE_ISO" || -z "$ITEM_ID" ]]; then
+            echo "Error: One or more required values are empty."
             exit 1
           fi
 
