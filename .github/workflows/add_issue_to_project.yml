@@ -1,36 +1,72 @@
-name: Map Operations Issue Fields to Project
-
+name: Map Issue Fields to Project
 on:
   issues:
-    types:
-      - opened
+    types: [opened]
 
 jobs:
-  map-fields:
+  update-project-fields:
     runs-on: ubuntu-latest
     steps:
-      - name: Check for "triage" label
-        if: contains(github.event.issue.labels.*.name, 'triage')
-        run: echo "Issue contains the 'triage' label. Proceeding with field mapping."
-
-      - name: Extract Issue Fields
-        id: extract_fields
+      - name: Extract Issue Fields & Update Project
+        env:
+          GH_TOKEN: ${{ secrets.PROJECT_PAT }}
         run: |
-          PRIORITY=$(echo "${{ github.event.issue.body }}" | grep -A1 "### Priority" | tail -n1 | xargs)
-          EFFORT=$(echo "${{ github.event.issue.body }}" | grep -A1 "### Level of Effort" | tail -n1 | xargs)
-          DUE_DATE=$(echo "${{ github.event.issue.body }}" | grep -A1 "### Due Date" | tail -n1 | xargs)
+          # Extract the issue body and parse fields using grep
+          ISSUE_BODY="${{ github.event.issue.body }}"
+          PRIORITY=$(echo "$ISSUE_BODY" | grep -oP '(?<=### Priority\n\n).*')
+          EFFORT=$(echo "$ISSUE_BODY" | grep -oP '(?<=### Level of Effort\n\n).*')
+          DUE_DATE=$(echo "$ISSUE_BODY" | grep -oP '(?<=### Due Date\n\n).*')
 
-          echo "priority=$PRIORITY" >> $GITHUB_ENV
-          echo "effort=$EFFORT" >> $GITHUB_ENV
-          echo "due_date=$DUE_DATE" >> $GITHUB_ENV
+          # Get project item ID for the issue
+          ITEM_ID=$(gh api graphql -F owner='bruthurs-inc' -F projectNumber=2 -F issueId="${{ github.event.issue.node_id }}" -f query='
+            query ($owner: String!, $projectNumber: Int!, $issueId: ID!) {
+              organization(login: $owner) {
+                projectV2(number: $projectNumber) {
+                  items(first: 100) {
+                    nodes {
+                      id
+                      content {
+                        ... on Issue {
+                          id
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }' --jq '.data.organization.projectV2.items.nodes[] | select(.content.id == "${{ github.event.issue.node_id }}") | .id')
 
-      - name: Add Issue to Project and Set Fields
-        uses: actions/add-to-project@v1.0.2
-        with:
-          project-url: https://github.com/orgs/bruthurs-inc/projects/2
-          github-token: ${{ secrets.PROJECT_PAT }}
-          content-id: ${{ github.event.issue.node_id }}
-          fields: |
-            Priority: ${{ env.priority }}
-            Level of Effort: ${{ env.effort }}
-            Due Date: ${{ env.due_date }}
+          # Check if ITEM_ID is found
+          if [[ -z "$ITEM_ID" ]]; then
+            echo "Error: Unable to find project item for issue."
+            exit 1
+          fi
+
+          # Update project fields via GraphQL
+          gh api graphql -F itemId="$ITEM_ID" -F projectId="PVT_kwDOBfaOE84ATF4c" -f query='
+            mutation ($itemId: ID!, $projectId: ID!) {
+              updateProjectV2ItemFieldValue(
+                input: {
+                  projectId: $projectId,
+                  itemId: $itemId,
+                  fieldId: "PVTSSF_lADOBfaOE84ATF4czgpFJPM",
+                  value: { text: "'"$PRIORITY"'" }
+                }
+              ) { clientMutationId }
+              updateProjectV2ItemFieldValue(
+                input: {
+                  projectId: $projectId,
+                  itemId: $itemId,
+                  fieldId: "PVTSSF_lADOBfaOE84ATF4czgpFJSo",
+                  value: { text: "'"$EFFORT"'" }
+                }
+              ) { clientMutationId }
+              updateProjectV2ItemFieldValue(
+                input: {
+                  projectId: $projectId,
+                  itemId: $itemId,
+                  fieldId: "PVTF_lADOBfaOE84ATF4czgpFJGw",
+                  value: { text: "'"$DUE_DATE"'" }
+                }
+              ) { clientMutationId }
+            }'
