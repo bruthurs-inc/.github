@@ -18,8 +18,8 @@ jobs:
           echo "Issue Body: $ISSUE_BODY"
 
           # Extract values using awk
-          PRIORITY=$(echo "$ISSUE_BODY" | awk -v RS='' '/### Priority/ {getline; print}')
-          EFFORT=$(echo "$ISSUE_BODY" | awk -v RS='' '/### Level of Effort/ {getline; print}')
+          PRIORITY=$(echo "$ISSUE_BODY" | awk -v RS='' '/### Priority/ {getline; print}' | xargs)
+          EFFORT=$(echo "$ISSUE_BODY" | awk -v RS='' '/### Level of Effort/ {getline; print}' | xargs)
           DUE_DATE=$(echo "$ISSUE_BODY" | awk -v RS='' '/### Due Date/ {getline; print}')
 
           echo "Extracted Priority: '$PRIORITY'"
@@ -72,14 +72,14 @@ jobs:
           echo "$PROJECT_FIELDS" | jq -r '.data.node.fields.nodes[] | select(.name == "Priority") | .options[] | .name'
 
           echo "Available Effort Options:"
-          echo "$PROJECT_FIELDS" | jq -r '.data.node.fields.nodes[] | select(.name == "Effort") | .options[] | .name'
+          echo "$PROJECT_FIELDS" | jq -r '.data.node.fields.nodes[] | select(.name == "Level of Effort") | .options[] | .name'
 
-          PRIORITY_OPTION_ID=$(echo "$PROJECT_FIELDS" | jq -r --arg priority "$(echo "$PRIORITY" | xargs)" '
+          PRIORITY_OPTION_ID=$(echo "$PROJECT_FIELDS" | jq -r --arg priority "$PRIORITY" '
             .data.node.fields.nodes[] | select(.name == "Priority") | .options[] |
             select(.name == $priority) | .id')
 
-          EFFORT_OPTION_ID=$(echo "$PROJECT_FIELDS" | jq -r --arg effort "$(echo "$EFFORT" | xargs)" '
-            .data.node.fields.nodes[] | select(.name == "Effort") | .options[] |
+          EFFORT_OPTION_ID=$(echo "$PROJECT_FIELDS" | jq -r --arg effort "$EFFORT" '
+            .data.node.fields.nodes[] | select(.name == "Level of Effort") | .options[] |
             select(.name == $effort) | .id')
 
           echo "Priority Option ID: '$PRIORITY_OPTION_ID'"
@@ -100,6 +100,8 @@ jobs:
           RETRY_DELAY=3  # seconds
           ITEM_ID=""
 
+          ISSUE_NODE_ID="${{ github.event.issue.node_id }}"
+
           for ((i=1; i<=MAX_RETRIES; i++)); do
             echo "Fetching project item ID (Attempt $i)..."
             ITEM_ID=$(gh api graphql -F projectId="PVT_kwDOBfaOE84ATF4c" -F contentId="$ISSUE_NODE_ID" -f query='
@@ -114,7 +116,7 @@ jobs:
                     }
                   }
                 }
-              }' --jq '.data.node.items.nodes[] | select(.content.id == "'"$ISSUE_NODE_ID"'" ) | .id')
+              }' --jq '.data.node.items.nodes[] | select(.content.id == $contentId) | .id')
 
             if [[ -n "$ITEM_ID" ]]; then
               break
