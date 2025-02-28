@@ -64,7 +64,7 @@ jobs:
           # Update project fields via GraphQL
           gh api graphql -F itemId="$ITEM_ID" -F projectId="$PROJECT_ID" -f query='
             mutation ($itemId: ID!, $projectId: ID!) {
-              updateProjectV2ItemFieldValue(
+              updatePriority: updateProjectV2ItemFieldValue(
                 input: {
                   projectId: $projectId,
                   itemId: $itemId,
@@ -72,7 +72,8 @@ jobs:
                   value: { text: "'"$PRIORITY"'" }
                 }
               ) { clientMutationId }
-              updateProjectV2ItemFieldValue(
+              
+              updateEffort: updateProjectV2ItemFieldValue(
                 input: {
                   projectId: $projectId,
                   itemId: $itemId,
@@ -80,7 +81,8 @@ jobs:
                   value: { text: "'"$EFFORT"'" }
                 }
               ) { clientMutationId }
-              updateProjectV2ItemFieldValue(
+              
+              updateDueDate: updateProjectV2ItemFieldValue(
                 input: {
                   projectId: $projectId,
                   itemId: $itemId,
@@ -89,4 +91,3 @@ jobs:
                 }
               ) { clientMutationId }
             }'
-
