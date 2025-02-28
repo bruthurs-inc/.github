@@ -29,24 +29,25 @@ jobs:
           # Fetch project fields
           echo "Fetching project fields..."
           PROJECT_FIELDS=$(gh api graphql -F projectId="PVT_kwDOBfaOE84ATF4c" -f query='
-            query($projectId: ID!) {
-              node(id: $projectId) {
-                ... on ProjectV2 {
-                  fields(first: 100) {
-                    nodes {
-                      id
-                      name
-                      ... on ProjectV2SingleSelectField {
-                        options {
-                          id
-                          name
-                        }
+          query($projectId: ID!) {
+            node(id: $projectId) {
+              ... on ProjectV2 {
+                fields(first: 100) {
+                  nodes {
+                    id
+                    name
+                    __typename
+                    ... on ProjectV2SingleSelectField {
+                      options {
+                        id
+                        name
                       }
                     }
                   }
                 }
               }
-            }')
+            }
+          }')
 
           echo "Received Project Fields JSON:"
           echo "$PROJECT_FIELDS" | jq .
