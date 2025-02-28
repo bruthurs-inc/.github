@@ -12,6 +12,7 @@ jobs:
           GH_TOKEN: ${{ secrets.PROJECT_PAT }}
         run: |
           ISSUE_BODY="${{ github.event.issue.body }}"
+          PROJECT_ID="PVT_kwDOBfaOE84ATF4c"
           
           # Extract values using awk (handles multiline better)
           PRIORITY=$(echo "$ISSUE_BODY" | awk -v RS='' '/### Priority/ {getline; print}')
