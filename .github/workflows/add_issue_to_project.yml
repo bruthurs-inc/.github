@@ -95,37 +95,24 @@ jobs:
 
           echo "Due Date (ISO): '$DUE_DATE_ISO'"
 
-          # Retry fetching project item ID if not found initially
-          MAX_RETRIES=5
-          RETRY_DELAY=3  # seconds
-          ITEM_ID=""
+          # Fetch project item ID using the issue node ID
+          echo "Fetching project item ID for Issue Node ID: '${{ github.event.issue.node_id }}'..."
 
-          ISSUE_NODE_ID="${{ github.event.issue.node_id }}"
-          echo "Issue Node ID: '$ISSUE_NODE_ID'"
-
-          for ((i=1; i<=MAX_RETRIES; i++)); do
-            echo "Fetching project item ID (Attempt $i)..."
-            ITEM_ID=$(gh api graphql -F projectId="PVT_kwDOBfaOE84ATF4c" -F contentId="$ISSUE_NODE_ID" -f query='
-              query($projectId: ID!, $contentId: ID!) {
-                node(id: $projectId) {
-                  ... on ProjectV2 {
-                    items(first: 100) {
-                      nodes {
+          ITEM_ID=$(gh api graphql -F projectId="PVT_kwDOBfaOE84ATF4c" -F issueNodeId="${{ github.event.issue.node_id }}" -f query='
+            query($projectId: ID!, $issueNodeId: ID!) {
+              search(query: "issueNodeId:$issueNodeId") {
+                edges {
+                  node {
+                    ... on Issue {
+                      project {
                         id
-                        content { ... on Issue { id } }
+                        projectItemId  # Extract the projectItemId
                       }
                     }
                   }
                 }
-              }' --jq '.data.node.items.nodes[] | select(.content.id == $contentId) | .id')
-
-            if [[ -n "$ITEM_ID" ]]; then
-              break
-            fi
-
-            echo "Project item not found, retrying in $RETRY_DELAY seconds..."
-            sleep $RETRY_DELAY
-          done
+              }
+            }' --jq '.data.search.edges[0].node.project.projectItemId')
 
           if [[ -z "$ITEM_ID" ]]; then
             echo "Error: Could not retrieve project item ID."
