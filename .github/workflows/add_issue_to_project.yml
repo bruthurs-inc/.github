@@ -12,82 +12,99 @@ jobs:
           GH_TOKEN: ${{ secrets.PROJECT_PAT }}
         run: |
           ISSUE_BODY="${{ github.event.issue.body }}"
-          ISSUE_ID="${{ github.event.issue.node_id }}"  # Use node_id for GraphQL
 
-          # Extract values using awk (handles multiline better)
+          # Extract values using awk
           PRIORITY=$(echo "$ISSUE_BODY" | awk -v RS='' '/### Priority/ {getline; print}')
           EFFORT=$(echo "$ISSUE_BODY" | awk -v RS='' '/### Level of Effort/ {getline; print}')
           DUE_DATE=$(echo "$ISSUE_BODY" | awk -v RS='' '/### Due Date/ {getline; print}')
-          
-          # Debugging Output (for testing)
+
+          # Debugging Output
           echo "Extracted Priority: $PRIORITY"
           echo "Extracted Effort: $EFFORT"
           echo "Extracted Due Date: $DUE_DATE"
-          echo "DEBUG: ISSUE_ID=$ISSUE_ID"
-
-          # Fail if any required value is empty
-          if [[ -z "$PRIORITY" || -z "$EFFORT" || -z "$DUE_DATE" ]]; then
-            echo "Error: One or more extracted values are empty."
-            exit 1
-          fi
-
-          # Optional: Sleep to avoid timing issues
-          # sleep 5  # Give GitHub time to attach the issue to the project
-
-          # Fetch the Project Item ID directly from the Issue
-          PROJECT_ID="PVT_kwDOBfaOE84ATF4c"
-          ITEM_ID=$(gh api graphql -F issueId="$ISSUE_ID" -f query='
-            query ($issueId: ID!) {
-              node(id: $issueId) {
-                ... on Issue {
-                  projectItems(first: 10) {
+          
+          # Fetch project options for priority and effort
+          PRIORITY_OPTION_ID=$(gh api graphql -F projectId="PVT_kwDOBfaOE84ATF4c" -f query='
+            query($projectId: ID!) {
+              node(id: $projectId) {
+                ... on ProjectV2 {
+                  fields(first: 100) {
                     nodes {
                       id
-                      project {
-                        id
+                      name
+                      singleSelectOptions(first: 100) {
+                        nodes {
+                          id
+                          name
+                        }
                       }
                     }
                   }
                 }
               }
-            }' --jq '.data.node.projectItems.nodes[] | select(.project.id == "'"$PROJECT_ID"'") | .id')
+            }' --jq '.data.node.fields.nodes[] | select(.name == "Priority") | .singleSelectOptions.nodes[] | select(.name == "'"$PRIORITY"'") | .id')
 
-          # Debugging Output
-          echo "DEBUG: ITEM_ID=$ITEM_ID"
+          EFFORT_OPTION_ID=$(gh api graphql -F projectId="PVT_kwDOBfaOE84ATF4c" -f query='
+            query($projectId: ID!) {
+              node(id: $projectId) {
+                ... on ProjectV2 {
+                  fields(first: 100) {
+                    nodes {
+                      id
+                      name
+                      singleSelectOptions(first: 100) {
+                        nodes {
+                          id
+                          name
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }' --jq '.data.node.fields.nodes[] | select(.name == "Effort") | .singleSelectOptions.nodes[] | select(.name == "'"$EFFORT"'") | .id')
 
-          # Check if ITEM_ID is found
-          if [[ -z "$ITEM_ID" ]]; then
-            echo "Error: Unable to find project item for issue."
+          # Convert Due Date to ISO 8601 format
+          DUE_DATE_ISO=$(date -d "$DUE_DATE" --iso-8601=seconds)
+
+          # Debug Output
+          echo "Priority Option ID: $PRIORITY_OPTION_ID"
+          echo "Effort Option ID: $EFFORT_OPTION_ID"
+          echo "Due Date (ISO): $DUE_DATE_ISO"
+
+          # Check if required values are empty
+          if [[ -z "$PRIORITY_OPTION_ID" || -z "$EFFORT_OPTION_ID" || -z "$DUE_DATE_ISO" ]]; then
+            echo "Error: One or more required values are empty."
             exit 1
           fi
 
-          # Update project fields via GraphQL
-          gh api graphql -F itemId="$ITEM_ID" -F projectId="$PROJECT_ID" -f query='
+          # Update the project fields
+          gh api graphql -F itemId="$ITEM_ID" -F projectId="PVT_kwDOBfaOE84ATF4c" -f query='
             mutation ($itemId: ID!, $projectId: ID!) {
               updatePriority: updateProjectV2ItemFieldValue(
                 input: {
                   projectId: $projectId,
                   itemId: $itemId,
                   fieldId: "PVTSSF_lADOBfaOE84ATF4czgpFJPM",
-                  value: { text: "'"$PRIORITY"'" }
+                  value: { singleSelectOptionId: "'"$PRIORITY_OPTION_ID"'" }
                 }
               ) { clientMutationId }
-              
+
               updateEffort: updateProjectV2ItemFieldValue(
                 input: {
                   projectId: $projectId,
                   itemId: $itemId,
                   fieldId: "PVTSSF_lADOBfaOE84ATF4czgpFJSo",
-                  value: { text: "'"$EFFORT"'" }
+                  value: { singleSelectOptionId: "'"$EFFORT_OPTION_ID"'" }
                 }
               ) { clientMutationId }
-              
+
               updateDueDate: updateProjectV2ItemFieldValue(
                 input: {
                   projectId: $projectId,
                   itemId: $itemId,
                   fieldId: "PVTF_lADOBfaOE84ATF4czgpFJGw",
-                  value: { text: "'"$DUE_DATE"'" }
+                  value: { date: "'"$DUE_DATE_ISO"'" }
                 }
               ) { clientMutationId }
             }'
