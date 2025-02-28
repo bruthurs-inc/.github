@@ -22,7 +22,7 @@ jobs:
           echo "Extracted Effort: $EFFORT"
           echo "Extracted Due Date: $DUE_DATE"
 
-          # Fetch project fields
+          # Fetch project fields with correct GraphQL query
           PROJECT_FIELDS=$(gh api graphql -F projectId="PVT_kwDOBfaOE84ATF4c" -f query='
             query($projectId: ID!) {
               node(id: $projectId) {
@@ -32,12 +32,10 @@ jobs:
                       id
                       name
                       dataType
-                      configuration {
-                        ... on ProjectV2SingleSelectFieldConfiguration {
-                          options {
-                            id
-                            name
-                          }
+                      ... on ProjectV2SingleSelectField {
+                        options {
+                          id
+                          name
                         }
                       }
                     }
@@ -46,14 +44,14 @@ jobs:
               }
             }')
 
-          # Extract field IDs and options using jq with fuzzy matching
+          # Extract field IDs and options using jq with improved filtering
           PRIORITY_OPTION_ID=$(echo "$PROJECT_FIELDS" | jq -r --arg priority "$PRIORITY" '
-            .data.node.fields.nodes[] | select(.name == "Priority") | .configuration.options[] |
-            select($priority | startswith(.name)) | .id')
+            .data.node.fields.nodes[] | select(.name == "Priority") | .options[] |
+            select(.name == $priority) | .id')
 
           EFFORT_OPTION_ID=$(echo "$PROJECT_FIELDS" | jq -r --arg effort "$EFFORT" '
-            .data.node.fields.nodes[] | select(.name == "Effort") | .configuration.options[] |
-            select($effort | startswith(.name)) | .id')
+            .data.node.fields.nodes[] | select(.name == "Effort") | .options[] |
+            select(.name == $effort) | .id')
 
           # Convert Due Date to ISO 8601 format
           DUE_DATE_ISO=$(date -d "$DUE_DATE" --iso-8601=seconds)
