@@ -37,22 +37,24 @@ jobs:
                     id
                     name
                     __typename
-                    ... on ProjectV2SingleSelectField {
-                      options {
-                        id
-                        name
-                      }
-                    }
-                    ... on ProjectV2IterationField {
-                      configuration {
-                        iterations {
+                    ... on ProjectV2FieldConfiguration {
+                      ... on ProjectV2SingleSelectField {
+                        options {
                           id
-                          title
+                          name
                         }
                       }
-                    }
-                    ... on ProjectV2Field {
-                      dataType
+                      ... on ProjectV2IterationField {
+                        configuration {
+                          iterations {
+                            id
+                            title
+                          }
+                        }
+                      }
+                      ... on ProjectV2Field {
+                        dataType
+                      }
                     }
                   }
                 }
