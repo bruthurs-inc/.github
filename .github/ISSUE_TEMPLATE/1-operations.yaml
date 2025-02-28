@@ -9,12 +9,13 @@ body:
     id: priority
     attributes:
       label: "Priority"
+      description: P0 (Critical urgency, extensive impact), P1 (High urgency, large impact), P2 (Moderate urgency, moderate impact), P3 (Low urgency, minor impact), P4 (Negligible urgency and impact)
       options:
-        - P0 (Critical urgency, extensive impact)
-        - P1 (High urgency, large impact)
-        - P2 (Moderate urgency, moderate impact)
-        - P3 (Low urgency, minor impact)
-        - P4 (Negligible urgency and impact)
+        - P0
+        - P1
+        - P2
+        - P3
+        - P4
     validations:
       required: true
         
