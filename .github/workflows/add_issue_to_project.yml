@@ -25,7 +25,7 @@ jobs:
           echo "due_date=$DUE_DATE" >> $GITHUB_ENV
 
       - name: Add Issue to Project and Set Fields
-        uses: actions/add-to-project@v1
+        uses: actions/add-to-project@v1.0.2
         with:
           project-url: https://github.com/orgs/bruthurs-inc/projects/2
           github-token: ${{ secrets.PROJECT_PAT }}
