@@ -30,8 +30,8 @@ jobs:
           fi
 
           # Get project item ID for the issue
-          ITEM_ID=$(gh api graphql -F owner='bruthurs-inc' -F projectNumber=2 -F issueId="${{ github.event.issue.node_id }}" -f query='
-            query ($owner: String!, $projectNumber: Int!, $issueId: ID!) {
+          ITEM_ID=$(gh api graphql -F owner='bruthurs-inc' -F projectNumber=2 -f query='
+            query ($owner: String!, $projectNumber: Int!) {
               organization(login: $owner) {
                 projectV2(number: $projectNumber) {
                   items(first: 100) {
@@ -46,7 +46,7 @@ jobs:
                   }
                 }
               }
-            }' --jq '.data.organization.projectV2.items.nodes[] | select(.content.id == "${{ github.event.issue.node_id }}") | .id')
+            }' --jq '.data.organization.projectV2.items.nodes[] | select(.content.id == "'"$ISSUE_ID"'"") | .id')
 
           # Check if ITEM_ID is found
           if [[ -z "$ITEM_ID" ]]; then
