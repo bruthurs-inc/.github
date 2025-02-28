@@ -12,6 +12,7 @@ jobs:
           GH_TOKEN: ${{ secrets.PROJECT_PAT }}
         run: |
           ISSUE_BODY="${{ github.event.issue.body }}"
+          ISSUE_ID="${{ github.event.issue.node_id }}"  # Use node_id for GraphQL
 
           # Extract values using awk (handles multiline better)
           PRIORITY=$(echo "$ISSUE_BODY" | awk -v RS='' '/### Priority/ {getline; print}')
@@ -22,34 +23,37 @@ jobs:
           echo "Extracted Priority: $PRIORITY"
           echo "Extracted Effort: $EFFORT"
           echo "Extracted Due Date: $DUE_DATE"
-          
+          echo "DEBUG: ISSUE_ID=$ISSUE_ID"
+
           # Fail if any required value is empty
           if [[ -z "$PRIORITY" || -z "$EFFORT" || -z "$DUE_DATE" ]]; then
             echo "Error: One or more extracted values are empty."
             exit 1
           fi
 
-          # Get the project item ID for the issue
+          # Optional: Sleep to avoid timing issues
+          # sleep 5  # Give GitHub time to attach the issue to the project
+
+          # Fetch the Project Item ID directly from the Issue
           PROJECT_ID="PVT_kwDOBfaOE84ATF4c"
-          ISSUE_ID="${{ github.event.issue.node_id }}"
-          
-          ITEM_ID=$(gh api graphql -F projectId="$PROJECT_ID" -f query='
-            query ($projectId: ID!) {
-              node(id: $projectId) {
-                ... on ProjectV2 {
-                  items(first: 100) {
+          ITEM_ID=$(gh api graphql -F issueId="$ISSUE_ID" -f query='
+            query ($issueId: ID!) {
+              node(id: $issueId) {
+                ... on Issue {
+                  projectItems(first: 10) {
                     nodes {
                       id
-                      content {
-                        ... on Issue {
-                          id
-                        }
+                      project {
+                        id
                       }
                     }
                   }
                 }
               }
-            }' --jq '.data.node.items.nodes[] | select(.content.id == "'"$ISSUE_ID"'" ) | .id')
+            }' --jq '.data.node.projectItems.nodes[] | select(.project.id == "'"$PROJECT_ID"'"") | .id')
+
+          # Debugging Output
+          echo "DEBUG: ITEM_ID=$ITEM_ID"
 
           # Check if ITEM_ID is found
           if [[ -z "$ITEM_ID" ]]; then
@@ -85,3 +89,4 @@ jobs:
                 }
               ) { clientMutationId }
             }'
+
