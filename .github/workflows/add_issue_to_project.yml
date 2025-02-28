@@ -101,6 +101,7 @@ jobs:
           ITEM_ID=""
 
           ISSUE_NODE_ID="${{ github.event.issue.node_id }}"
+          echo "Issue Node ID: '$ISSUE_NODE_ID'"
 
           for ((i=1; i<=MAX_RETRIES; i++)); do
             echo "Fetching project item ID (Attempt $i)..."
