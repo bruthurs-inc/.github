@@ -50,7 +50,7 @@ jobs:
                   }
                 }
               }
-            }' --jq '.data.node.projectItems.nodes[] | select(.project.id == "'"$PROJECT_ID"'"") | .id')
+            }' --jq '.data.node.projectItems.nodes[] | select(.project.id == "'"$PROJECT_ID"'") | .id')
 
           # Debugging Output
           echo "DEBUG: ITEM_ID=$ITEM_ID"
