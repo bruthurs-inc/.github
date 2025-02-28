@@ -70,11 +70,11 @@ jobs:
           # Extract field options
           echo "Extracting field options..."
           PRIORITY_OPTION_ID=$(echo "$PROJECT_FIELDS" | jq -r --arg priority "$PRIORITY" '
-            .data.node.fields.nodes[] | select(.name == "Priority") | .options[] |
+            .data.node.fields.nodes[] | select(.name == "Priority") | .options[]? |
             select(.name == $priority) | .id')
 
           EFFORT_OPTION_ID=$(echo "$PROJECT_FIELDS" | jq -r --arg effort "$EFFORT" '
-            .data.node.fields.nodes[] | select(.name == "Effort") | .options[] |
+            .data.node.fields.nodes[] | select(.name == "Effort") | .options[]? |
             select(.name == $effort) | .id')
 
           echo "Priority Option ID: '$PRIORITY_OPTION_ID'"
@@ -90,36 +90,10 @@ jobs:
 
           echo "Due Date (ISO): '$DUE_DATE_ISO'"
 
+          # Fetch project item ID
           echo "Fetching project item ID..."
           PROJECT_ITEMS=$(gh api graphql -F projectId="PVT_kwDOBfaOE84ATF4c" -f query='
             query($projectId: ID!) {
-              node(id: $projectId) {
-                ... on ProjectV2 {
-                  items(first: 100) {
-                    nodes {
-                      id
-                      content { ... on Issue { id } }
-                    }
-                  }
-                }
-              }
-            }')
-          
-          echo "Raw Project Items Response:"
-          echo "$PROJECT_ITEMS" | jq '.'  # Pretty-print the JSON response
-
-          ISSUE_NODE_ID="${{ github.event.issue.node_id }}"
-
-          ITEM_ID=$(echo "$PROJECT_ITEMS" | jq -r --arg issue_id "$ISSUE_NODE_ID" '
-            .data.node.items.nodes[] | select(.content.id == $issue_id) | .id'
-          )
-          
-          echo "Extracted Project Item ID: '$ITEM_ID'"
-
-          # Fetch project item ID
-          echo "Fetching project item ID..."
-          ITEM_ID=$(gh api graphql -F projectId="PVT_kwDOBfaOE84ATF4c" -F contentId="${{ github.event.issue.node_id }}" -f query='
-            query($projectId: ID!, $contentId: ID!) {
               node(id: $projectId) {
                 ... on ProjectV2 {
                   items(first: 100) {
@@ -132,13 +106,25 @@ jobs:
                   }
                 }
               }
-            }' --jq '.data.node.items.nodes[] | select(.content.id == "${{ github.event.issue.node_id }}") | .id')
+            }')
+          
+          echo "Raw Project Items Response:"
+          echo "$PROJECT_ITEMS" | jq '.'  # Pretty-print the JSON response
 
-          echo "Project Item ID: '$ITEM_ID'"
+          ISSUE_NODE_ID="${{ github.event.issue.node_id }}"
+
+          ITEM_ID=$(echo "$PROJECT_ITEMS" | jq -r --arg issue_id "$ISSUE_NODE_ID" '
+            .data.node.items.nodes[] | select(.content.id? == $issue_id) | .id')
+
+          echo "Extracted Project Item ID: '$ITEM_ID'"
 
           # Check if required values are empty
           if [[ -z "$PRIORITY_OPTION_ID" || -z "$EFFORT_OPTION_ID" || -z "$DUE_DATE_ISO" || -z "$ITEM_ID" ]]; then
             echo "Error: One or more required values are empty."
+            echo "  Priority Option ID: '$PRIORITY_OPTION_ID'"
+            echo "  Effort Option ID: '$EFFORT_OPTION_ID'"
+            echo "  Due Date ISO: '$DUE_DATE_ISO'"
+            echo "  Project Item ID: '$ITEM_ID'"
             exit 1
           fi
 
