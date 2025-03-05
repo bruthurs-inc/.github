@@ -11,63 +11,62 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.PROJECT_PAT }}
         run: |
-          set -e  # Exit on error
+          set -e  # Exit immediately if a command fails
 
           echo "Extracting issue fields..."
           ISSUE_BODY="${{ github.event.issue.body }}"
-
-          # Extract values using sed for robustness
-          PRIORITY=$(echo "$ISSUE_BODY" | awk -v RS='\r?\n\r?\n' '/### Priority/ {getline; print}' | xargs)
-          EFFORT=$(echo "$ISSUE_BODY" | awk -v RS='\r?\n\r?\n' '/### Level of Effort/ {getline; print}' | xargs)
-          DUE_DATE=$(echo "$ISSUE_BODY" | awk -v RS='\r?\n\r?\n' '/### Due Date/ {getline; print}' | xargs)
+          PRIORITY=$(echo "$ISSUE_BODY" | awk -v RS='' '/### Priority/ {getline; print}' | xargs)
+          EFFORT=$(echo "$ISSUE_BODY" | awk -v RS='' '/### Level of Effort/ {getline; print}' | xargs)
+          DUE_DATE=$(echo "$ISSUE_BODY" | awk -v RS='' '/### Due Date/ {getline; print}')
 
           echo "Extracted Priority: '$PRIORITY'"
           echo "Extracted Effort: '$EFFORT'"
           echo "Extracted Due Date: '$DUE_DATE'"
 
-          # Fetch project fields
           echo "Fetching project fields..."
-          PROJECT_FIELDS=$(gh api graphql -f query='
-          query {
-            node(id: "PVT_kwDOBfaOE84ATF4c") {
+          PROJECT_FIELDS=$(gh api graphql -F projectId="PVT_kwDOBfaOE84ATF4c" -f query='
+          query($projectId: ID!) {
+            node(id: $projectId) {
               ... on ProjectV2 {
                 fields(first: 100) {
                   nodes {
+                    __typename
                     id
                     name
-                    __typename
                     ... on ProjectV2SingleSelectField {
                       options {
                         id
                         name
                       }
                     }
-                  }
-                }
-                items(first: 100) {
-                  nodes {
-                    id
-                    content {
-                      ... on Issue {
-                        id
+                    ... on ProjectV2IterationField {
+                      configuration {
+                        iterations {
+                          id
+                          title
+                        }
                       }
+                    }
+                    ... on ProjectV2Field {
+                      dataType
+                    }
+                    ... on ProjectV2TextField {
+                      id
+                    }
+                    ... on ProjectV2DateField {
+                      id
+                    }
+                    ... on ProjectV2NumberField {
+                      id
                     }
                   }
                 }
               }
             }
-          }
-          ')
+          }')
 
-          echo "Received Project Fields JSON:"
           echo "$PROJECT_FIELDS" | jq .
 
-          # Extract field IDs
-          PRIORITY_FIELD_ID=$(echo "$PROJECT_FIELDS" | jq -r '.data.node.fields.nodes[] | select(.name == "Priority") | .id')
-          EFFORT_FIELD_ID=$(echo "$PROJECT_FIELDS" | jq -r '.data.node.fields.nodes[] | select(.name == "Level of Effort") | .id')
-          DUE_DATE_FIELD_ID=$(echo "$PROJECT_FIELDS" | jq -r '.data.node.fields.nodes[] | select(.name == "Due Date") | .id')
-
-          # Extract field option IDs
           PRIORITY_OPTION_ID=$(echo "$PROJECT_FIELDS" | jq -r --arg priority "$PRIORITY" '
             .data.node.fields.nodes[] | select(.name == "Priority") | .options[] |
             select(.name == $priority) | .id')
@@ -79,43 +78,61 @@ jobs:
           echo "Priority Option ID: '$PRIORITY_OPTION_ID'"
           echo "Effort Option ID: '$EFFORT_OPTION_ID'"
 
-          # Convert Due Date to ISO 8601 format safely
           if [[ -n "$DUE_DATE" ]]; then
-            DUE_DATE_ISO=$(date -u -d "$DUE_DATE" +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || echo "")
+            DUE_DATE_ISO=$(date -d "$DUE_DATE" --iso-8601=seconds || echo "")
           else
             DUE_DATE_ISO=""
           fi
+
           echo "Due Date (ISO): '$DUE_DATE_ISO'"
 
-          # Fetch project item ID by matching issue node ID
           ISSUE_NODE_ID="${{ github.event.issue.node_id }}"
-          ITEM_ID=$(echo "$PROJECT_FIELDS" | jq -r --arg issueId "$ISSUE_NODE_ID" '
-            .data.node.items.nodes[] | select(.content.id == $issueId) | .id')
+          echo "Issue Node ID: '$ISSUE_NODE_ID'"
+          ITEM_ID=$(gh api graphql -F projectId="PVT_kwDOBfaOE84ATF4c" -F issueNodeId="$ISSUE_NODE_ID" -f query='
+            query($projectId: ID!, $issueNodeId: ID!) {
+              node(id: $issueNodeId) {
+                ... on Issue {
+                  projectItems(first: 1) {
+                    nodes {
+                      id
+                    }
+                  }
+                }
+              }
+            }' --jq '.data.node.projectItems.nodes[0].id')
 
           if [[ -z "$ITEM_ID" ]]; then
             echo "Error: Could not retrieve project item ID."
             exit 1
           fi
 
-          echo "Extracted Project Item ID: '$ITEM_ID'"
-
-          # Ensure required values exist before updating
-          if [[ -z "$PRIORITY_OPTION_ID" || -z "$EFFORT_OPTION_ID" || -z "$DUE_DATE_ISO" || -z "$ITEM_ID" ]]; then
-            echo "Error: One or more required values are empty."
-            exit 1
-          fi
-
-          # Perform batch update using a single mutation
           echo "Updating project fields..."
-          gh api graphql -f query='
-          mutation($projectId: ID!, $itemId: ID!, $updates: [ProjectV2ItemFieldValueUpdate!]!) {
-            updateProjectV2ItemFieldValues(input: { projectId: $projectId, itemId: $itemId, updates: $updates }) {
-              clientMutationId
-            }
-          }' -f projectId="PVT_kwDOBfaOE84ATF4c" -f itemId="$ITEM_ID" -f updates="$(jq -n \
-            --arg priorityField "$PRIORITY_FIELD_ID" --arg priorityValue "$PRIORITY_OPTION_ID" \
-            --arg effortField "$EFFORT_FIELD_ID" --arg effortValue "$EFFORT_OPTION_ID" \
-            --arg dueDateField "$DUE_DATE_FIELD_ID" --arg dueDateValue "$DUE_DATE_ISO" \
-            '[{fieldId: $priorityField, value: {singleSelectOptionId: $priorityValue}}, 
-              {fieldId: $effortField, value: {singleSelectOptionId: $effortValue}}, 
-              {fieldId: $dueDateField, value: {date: $dueDateValue}}]')"
+          gh api graphql -F itemId="$ITEM_ID" -F projectId="PVT_kwDOBfaOE84ATF4c" -f query='
+            mutation ($itemId: ID!, $projectId: ID!) {
+              updatePriority: updateProjectV2ItemFieldValue(
+                input: {
+                  projectId: $projectId,
+                  itemId: $itemId,
+                  fieldId: "PVTSSF_lADOBfaOE84ATF4czgpFJPM",
+                  value: { singleSelectOptionId: "'$PRIORITY_OPTION_ID'" }
+                }
+              ) { clientMutationId }
+
+              updateEffort: updateProjectV2ItemFieldValue(
+                input: {
+                  projectId: $projectId,
+                  itemId: $itemId,
+                  fieldId: "PVTSSF_lADOBfaOE84ATF4czgpFJSo",
+                  value: { singleSelectOptionId: "'$EFFORT_OPTION_ID'" }
+                }
+              ) { clientMutationId }
+
+              updateDueDate: updateProjectV2ItemFieldValue(
+                input: {
+                  projectId: $projectId,
+                  itemId: $itemId,
+                  fieldId: "PVTF_lADOBfaOE84ATF4czgpFJGw",
+                  value: { date: "'$DUE_DATE_ISO'" }
+                }
+              ) { clientMutationId }
+            }'
