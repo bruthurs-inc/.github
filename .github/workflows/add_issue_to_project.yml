@@ -112,14 +112,11 @@ jobs:
                     projectItems(first: 10) {
                       nodes {
                         id
-                        project {
-                          id
-                        }
                       }
                     }
                   }
                 }
-              }' --jq '.data.node.projectItems.nodes[] | select(.project.id == "PVT_kwDOBfaOE84ATF4c") | .id')
+              }' --jq '.data.node.projectItems.nodes[0].id')
 
             if [[ -n "$ITEM_ID" ]]; then
               break
