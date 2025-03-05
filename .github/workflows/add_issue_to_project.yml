@@ -35,6 +35,7 @@ jobs:
                   nodes {
                     id
                     name
+                    __typename
                     ... on ProjectV2SingleSelectField {
                       options {
                         id
@@ -55,7 +56,8 @@ jobs:
                 }
               }
             }
-          }')
+          }
+          ')
 
           echo "Received Project Fields JSON:"
           echo "$PROJECT_FIELDS" | jq .
