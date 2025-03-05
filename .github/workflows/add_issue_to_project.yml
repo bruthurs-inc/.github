@@ -17,9 +17,9 @@ jobs:
           ISSUE_BODY="${{ github.event.issue.body }}"
 
           # Extract values using sed for robustness
-          PRIORITY=$(echo "$ISSUE_BODY" | sed -n '/### Priority/{n;p;}' | xargs)
-          EFFORT=$(echo "$ISSUE_BODY" | sed -n '/### Level of Effort/{n;p;}' | xargs)
-          DUE_DATE=$(echo "$ISSUE_BODY" | sed -n '/### Due Date/{n;p;}')
+          PRIORITY=$(echo "$ISSUE_BODY" | awk -v RS='\r?\n\r?\n' '/### Priority/ {getline; print}' | xargs)
+          EFFORT=$(echo "$ISSUE_BODY" | awk -v RS='\r?\n\r?\n' '/### Level of Effort/ {getline; print}' | xargs)
+          DUE_DATE=$(echo "$ISSUE_BODY" | awk -v RS='\r?\n\r?\n' '/### Due Date/ {getline; print}' | xargs)
 
           echo "Extracted Priority: '$PRIORITY'"
           echo "Extracted Effort: '$EFFORT'"
