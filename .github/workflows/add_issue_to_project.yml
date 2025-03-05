@@ -74,11 +74,11 @@ jobs:
           echo "Available Effort Options:"
           echo "$PROJECT_FIELDS" | jq -r '.data.node.fields.nodes[] | select(.name == "Level of Effort") | .options[] | .name'
 
-          PRIORITY_OPTION_ID=$(echo "$PROJECT_FIELDS" | jq -r --arg priority "$PRIORITY" '
+          PRIORITY_OPTION_ID=$(echo "$PROJECT_FIELDS" | jq -r --arg priority "$(echo "$PRIORITY" | awk '{print $1}')" '
             .data.node.fields.nodes[] | select(.name == "Priority") | .options[] |
             select(.name == $priority) | .id')
-
-          EFFORT_OPTION_ID=$(echo "$PROJECT_FIELDS" | jq -r --arg effort "$EFFORT" '
+          
+          EFFORT_OPTION_ID=$(echo "$PROJECT_FIELDS" | jq -r --arg effort "$(echo "$EFFORT" | awk '{print $1}')" '
             .data.node.fields.nodes[] | select(.name == "Level of Effort") | .options[] |
             select(.name == $effort) | .id')
 
@@ -119,7 +119,7 @@ jobs:
                     }
                   }
                 }
-              }' --jq '.data.node.projectItems.nodes[] | select(.project.id == $projectId) | .id')
+              }' --jq '.data.node.projectItems.nodes[] | select(.project.id == "PVT_kwDOBfaOE84ATF4c") | .id')
 
             if [[ -n "$ITEM_ID" ]]; then
               break
